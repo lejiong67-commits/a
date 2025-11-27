@@ -1,0 +1,34 @@
+name: Convert SVG to PNG
+
+on:
+  push:
+    paths:
+      - "**.svg"
+  workflow_dispatch:
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Inkscape
+        run: sudo apt-get update && sudo apt-get install -y inkscape
+
+      - name: Convert SVG to PNG
+        run: |
+          for f in $(git diff --name-only HEAD~1 HEAD -- "*.svg"); do
+            png="${f%.svg}.png"
+            inkscape "$f" --export-type=png --export-filename="$png"
+          done
+
+      - name: Commit PNG files
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add "**/*.png"
+          git diff --cached --quiet || git commit -m "Auto-convert SVG to PNG"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
